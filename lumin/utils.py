@@ -23,12 +23,13 @@ def read_and_project_image(filepath: str = None, first_frame: int = 0):
     img_stack = io.imread(filepath)
     image_projected = np.max(img_stack[first_frame:], axis = (0)) 
 
-    return image_projected, img_stack # return projected image and stack
+    return image_projected, img_stack # return projected image and stacks
 
 
 
 def parse_input_output(input_file: str = None, project_dir: str = None, selection_mode: str = None, co_stain: bool = False):
     try:
+
         image_df = pd.read_csv(input_file,  index_col=None, sep=None)
         image_df['image_id'] = image_df['filename'].astype(str) + '_' + image_df['plate_id'].astype(str) 
 

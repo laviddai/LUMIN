@@ -618,14 +618,16 @@ def beeswarm(cell_properties_df: pd.DataFrame,
                               markerfacecolor=palette[hc], label=str(hc),
                               markersize=6)
                    for hc in hue_categories]
-        ax.legend(handles=handles, title=hue, frameon=False)
+        ax.legend(handles=handles, title=hue,loc='center left', bbox_to_anchor=(1, 0.5), frameon=False, fontsize='small', handlelength=1.2, handletextpad=0.3)
 
     # optional std threshold line
     if std_threshold is not None:
         ref_vals = cell_properties_df.loc[cell_properties_df[x] == x_categories[0], y].values
         ax.axhline(np.std(ref_vals)*std_threshold, color='red',
                    linewidth=1, linestyle='--', label='std threshold')
-        ax.legend(loc='upper left',bbox_to_anchor=(-0.03, 1), frameon=False, fontsize='small', handlelength=1.2, handletextpad=0.3)
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False, fontsize='small', handlelength=1.2, handletextpad=0.3)
+
+
         
         
     #if std_threshold is not None:

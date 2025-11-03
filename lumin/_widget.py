@@ -113,7 +113,9 @@ def segmentation_widget():
         marker_name = dict(widget_type='LineEdit',name = 'marker_name', label='Marker', value='',  tooltip='Cell population name to be annotated.'),
         annotation_point_size = dict(widget_type='IntSlider', name='annotation_point_size',label='Point size', value=20, min=0, max=70, step=1, tooltip='Point size for manual annotation.'),
         optimize_button  = dict(widget_type='PushButton', text='Test settings on random image', tooltip='Samples a random recording from input to test segmentation parameters.', enabled=False),
+        optimize_button_previous  = dict(widget_type='PushButton', text='Test settings on the same image', tooltip='Uses the same recording to test segmentation parameters.', enabled=False),
         
+
         # Post-filtering settings
         nuclear_overlap = dict(widget_type='FloatSlider', name='nuclear_overlap',label='Nuclear overlap', value = 0, min=0, max=1, step=0.01, tooltip='Minimum fraction of nuclear mask overlapping with cytoplasmic mask.'),
         nuclear_area = dict(widget_type='RangeSlider', name='nuclear_area',label='Nuclear area', value = (0,1), min=0, max=1, step=1, tooltip='Range of nuclear mask size in pixels.'),
@@ -123,7 +125,7 @@ def segmentation_widget():
 
     )
 
-    def widget(input_file, project_dir,  seg_label, selection_mode, nuclear_stain, co_stain, marker_name, stain_to_segment,label_sd,  prob_thresh_sd, overlap_thresh_sd ,label_cp, model_cp,diameter_cp,  cellprob_threshold_cp, flow_threshold_cp, optimize_button, nuclear_overlap,nuclear_area,cell_area,  ca_intensity, filters_checkbox, annotation_point_size):
+    def widget(input_file, project_dir,  seg_label, selection_mode, nuclear_stain, co_stain, marker_name, stain_to_segment,label_sd,  prob_thresh_sd, overlap_thresh_sd ,label_cp, model_cp,diameter_cp,  cellprob_threshold_cp, flow_threshold_cp, optimize_button, optimize_button_previous, nuclear_overlap,nuclear_area,cell_area,  ca_intensity, filters_checkbox, annotation_point_size):
         pass
 
     widget.call_button.enabled = False
@@ -138,6 +140,7 @@ def segmentation_widget():
             self.skip_update = False 
             self.cp_model_dict = {}
             self.model_sd = None 
+            self.image_index = None
 
     widget_state = WidgetState()
 
@@ -385,7 +388,12 @@ def segmentation_widget():
                         cell_properties_nuclear_df = utils.get_cell_properties(mask = mask_nuclear, image = first_frame_image)
                         cell_properties_cyto_df = utils.get_cell_properties(mask = mask_cyto, image = image_projected)
 
-                        overlap_df, filtered_mask_cyto, filtered_mask_nuclear = utils.nuclei_cell_intersection(mask_nuclear = mask_nuclear, df_nuclear = cell_properties_nuclear_df, mask_cyto = mask_cyto, df_cyto = cell_properties_cyto_df)
+                        if len(cell_properties_nuclear_df) > 0:
+                            overlap_df, filtered_mask_cyto, filtered_mask_nuclear = utils.nuclei_cell_intersection(mask_nuclear = mask_nuclear, df_nuclear = cell_properties_nuclear_df, mask_cyto = mask_cyto, df_cyto = cell_properties_cyto_df)
+                        else:
+                            print(f'Warning: {filepath} is empty\n')
+                            break
+                
 
                         cell_properties_df = utils.get_cell_properties(mask = filtered_mask_cyto, image = image_projected)
 
@@ -514,11 +522,7 @@ def segmentation_widget():
         widget.co_stain.value = '-- Select --'
         widget.marker_name.value = ''
         widget.annotation_point_size.value = 20
-        widget.nuclear_overlap.value = 0
-        widget.nuclear_area.value = (0,1)
-        widget.cell_area.value = (0,1)
-        widget.ca_intensity.value = (0,1)
-        widget.filters_checkbox.value = True
+
 
 
 
@@ -539,6 +543,7 @@ def segmentation_widget():
     widget.cellprob_threshold_cp.visible = False
     widget.flow_threshold_cp.visible = False
     widget.optimize_button.visible = False
+    widget.optimize_button_previous.visible = False
     widget.nuclear_overlap.visible = False
     widget.cell_area.visible = False
     widget.nuclear_area.visible = False
@@ -597,6 +602,7 @@ def segmentation_widget():
             widget.cellprob_threshold_cp.visible = False
             widget.flow_threshold_cp.visible = False
             widget.optimize_button.visible = False
+            widget.optimize_button_previous.visible = False
             widget.nuclear_overlap.visible = False
             widget.cell_area.visible = False
             widget.nuclear_area.visible = False
@@ -647,6 +653,7 @@ def segmentation_widget():
         widget.cellprob_threshold_cp.visible = False
         widget.flow_threshold_cp.visible = False
         widget.optimize_button.visible = False
+        widget.optimize_button_previous.visible=False
         widget.nuclear_overlap.visible = False
         widget.cell_area.visible = False
         widget.nuclear_area.visible = False
@@ -694,6 +701,7 @@ def segmentation_widget():
             widget.cellprob_threshold_cp.visible = False
             widget.flow_threshold_cp.visible = False
             widget.optimize_button.visible = True
+            widget.optimize_button_previous.visible = True
             widget.nuclear_overlap.visible = False
             widget.cell_area.visible = False
             widget.nuclear_area.visible = False
@@ -712,6 +720,7 @@ def segmentation_widget():
             widget.cellprob_threshold_cp.visible = True
             widget.flow_threshold_cp.visible = True
             widget.optimize_button.visible = True
+            widget.optimize_button_previous.visible = True
             widget.nuclear_overlap.visible = False
             widget.cell_area.visible = False
             widget.nuclear_area.visible = False
@@ -730,6 +739,7 @@ def segmentation_widget():
             widget.cellprob_threshold_cp.visible = True
             widget.flow_threshold_cp.visible = True
             widget.optimize_button.visible = True
+            widget.optimize_button_previous.visible = True
             widget.nuclear_overlap.visible = False
             widget.cell_area.visible = False
             widget.nuclear_area.visible = False
@@ -738,11 +748,11 @@ def segmentation_widget():
             widget.filters_checkbox.visible = False
 
 
-    # Function allowing user to optimize segmentation
-    @widget.optimize_button.clicked.connect
-    def _optimize_segmentation():
+
+    def _optimize_segmentation(image_to_use):
 
         print('Testing segmentation settings on random image...')
+
 
         try:
             # Function setting the ranges for post-processing settings
@@ -760,6 +770,7 @@ def segmentation_widget():
                 if widget[column].value[0] == 0 and widget[column].value[1] == 1:
                     widget[column].value = (0, widget[column].max)
 
+        
             # Extract values from widgets
             selection_mode = widget.selection_mode.value
 
@@ -790,7 +801,12 @@ def segmentation_widget():
                 first_frame = 1
 
             # Draw random image
-            i = random.randint(0, len(image_df)-1)
+            if image_to_use == 'random':
+                i = random.randint(0, len(image_df)-1)
+                widget_state.image_index = i
+            elif image_to_use == 'previous':
+                i = widget_state.image_index
+
             filepath = image_df.iloc[i].filepath
             print(f'Reading image from {filepath} and projecting to its max intensity...')
 
@@ -878,7 +894,11 @@ def segmentation_widget():
                 original_df_nuclear = utils.get_cell_properties(mask = mask_nuclear, image = first_frame_image)
                 original_df_cyto = utils.get_cell_properties(mask = mask_cyto, image = image_projected)
 
-                overlap_df, filtered_mask_cyto, filtered_mask_nuclear = utils.nuclei_cell_intersection(mask_nuclear = mask_nuclear, df_nuclear = original_df_nuclear, mask_cyto = mask_cyto, df_cyto = original_df_cyto)
+                if len(original_df_nuclear) > 0:
+                    overlap_df, filtered_mask_cyto, filtered_mask_nuclear = utils.nuclei_cell_intersection(mask_nuclear = mask_nuclear, df_nuclear = original_df_nuclear, mask_cyto = mask_cyto, df_cyto = original_df_cyto)
+                else:
+                    print(f'Warning: {filepath} is empty\n')
+                    return
                 
                 viewer.add_labels(filtered_mask_nuclear, name='Mask nuclear filtered', colormap={label: [1.0, 0.5, 0.0, 1.0] for label in np.unique(filtered_mask_nuclear) if label != 0})
                 viewer.layers['Mask nuclear filtered'].contour = 3
@@ -906,6 +926,9 @@ def segmentation_widget():
 
                 viewer.dims.current_step = (0,)
 
+            widget.optimize_button_previous.enabled = True
+
+
             print(f'Segmentation done, try post-filtering settings to optimize the segmentation... and test the segmentation with another image...\n')
 
             apply_intensity_area_filters()
@@ -914,7 +937,9 @@ def segmentation_widget():
             print("\nAn error occurred:", e)
             traceback.print_exc()
 
-
+    # Function allowing user to optimize segmentation
+    widget.optimize_button.clicked.connect(lambda: _optimize_segmentation('random'))
+    widget.optimize_button_previous.clicked.connect(lambda: _optimize_segmentation('previous'))
 
 
     def apply_intensity_area_filters():
