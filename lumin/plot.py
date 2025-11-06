@@ -194,8 +194,7 @@ def overlaid_traces_two_groups(cell_properties_df: pd.DataFrame = None, trace: s
 
 
 def cellwise_traces(cell_properties_df: pd.DataFrame, trace: str = None, baseline: bool = False, spikes: bool = False,
-                    spikes_mode: Literal["all", "filtered"] = "all", output_path: str = None):
-
+                    spikes_mode: Literal["all", "filtered"] = "all", output_path: str = None, smoothing: bool = False):
 
     filename = cell_properties_df['filename'].iloc[0]
     plot_list = []
@@ -218,6 +217,10 @@ def cellwise_traces(cell_properties_df: pd.DataFrame, trace: str = None, baselin
         for i, (idx, cell) in enumerate(chunk_df.iterrows()):
             ax_plot = ax[i]
             ax_plot.plot(cell[trace], color= '#1c1fb0',  linewidth=2)
+
+            if smoothing == True:
+                ax_plot.plot(cell['dff_smoothed'], color= 'magenta',  linewidth=1)
+
 
             if baseline and 'baseline' in cell:
                 ax_plot.plot(cell['baseline'], color = '#fc4a2b', alpha=0.7,  linewidth=1)

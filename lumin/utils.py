@@ -187,78 +187,12 @@ def compute_auc(cell_properties_df: pd.DataFrame, start_frame: int  = None, end_
     cell_properties_df[column] = auc_list
     return cell_properties_df
 
-# Check for the column names, very risky function
-'''def percentage_responding_baseline(cell_properties_df: pd.DataFrame):
-
-    columns = list(set(cell_properties_df.columns).difference(['label', 'centroid-0', 'centroid-1', 'ca_intensity',
-    'overlap_fraction_nuclear', 'nuclear_area', 'cell_area', 'nuclear_id','area',
-    'raw', 'mask_path', 'filepath', 'Unnamed: 0', 'dff', 'baseline', 'AUC','AUC_kcl', 'response']))
-
-    response_perc_well_df = cell_properties_df[columns].drop_duplicates().reset_index(drop=True)
-
-    if 'marker' in cell_properties_df.columns:
-        grouped = cell_properties_df.groupby(['stimulation', 'image_id', 'marker'])
-    else:
-        grouped = cell_properties_df.groupby(['stimulation', 'image_id'])
-
-    # Count how many are "above" and "below" per group
-    counts = grouped['response'].value_counts().unstack(fill_value=0)
-
-    # Make sure "above" and "below" columns exist
-    for col in ['above', 'below']:
-        if col not in counts.columns:
-            counts[col] = 0
-
-    # Calculate proportions
-    counts['proportion_positive_cells'] = round(counts['above'] / counts.sum(axis=1) * 100, 2)
-    counts['proportion_negative_cells'] = round(counts['below'] / counts.sum(axis=1) * 100, 2)
-
-    if 'marker' in cell_properties_df:
-        # Merge back to your response_perc_well_df
-        response_perc_well_df = response_perc_well_df.merge(
-            counts[['proportion_positive_cells', 'proportion_negative_cells']],
-            on=['stimulation', 'image_id', 'marker'],
-            how='left'
-        )
-    else:
-        response_perc_well_df = response_perc_well_df.merge(
-            counts[['proportion_positive_cells', 'proportion_negative_cells']],
-            on=['stimulation', 'image_id'],
-            how='left'
-        )
-
-
-    response_perc_well_df = response_perc_well_df.sort_values(['stimulation','proportion_positive_cells'], ascending = False)
-    if 'marker' in cell_properties_df:
-        response_perc_rep_df = response_perc_well_df.groupby(['biological_replicate', 'stimulation', 'marker'], observed=True)['proportion_positive_cells'].mean().reset_index()
-    else: 
-        response_perc_rep_df = response_perc_well_df.groupby(['biological_replicate', 'stimulation'], observed=True)['proportion_positive_cells'].mean().reset_index()
-
-
-    return response_perc_well_df, response_perc_rep_df'''
-
-
-''''response_perc_well_df = cell_properties_df[columns].drop_duplicates().reset_index(drop=True)
-
-    if 'marker' in cell_properties_df.columns:
-        grouped = cell_properties_df.groupby(['stimulation', 'image_id', 'marker'])
-    else:
-        grouped = cell_properties_df.groupby(['stimulation', 'image_id'])
-
-    # Count how many are "above" and "below" per group
-    counts = grouped['response'].value_counts().unstack(fill_value=0)
-
-    # Make sure "above" and "below" columns exist
-    for col in ['above', 'below']:
-        if col not in counts.columns:
-            counts[col] = 0
-'''
 
 
 def percentage_responding(cell_properties_df: pd.DataFrame, analysis_type = None):
     columns = list(set(cell_properties_df.columns).difference(['label', 'centroid-0', 'centroid-1', 'ca_intensity',
     'overlap_fraction_nuclear', 'nuclear_area', 'cell_area', 'nuclear_id', 'area','AUC_kcl','AUC','response',
-    'raw', 'mask_path', 'filepath', 'Unnamed: 0', 'dff', 'baseline', 'peak_location','rise_time','amplitude', 'decay_time', 'low_quality_peaks', 'prominence', 'width', 'frequency']))
+    'raw', 'mask_path', 'filepath', 'Unnamed: 0', 'dff', 'dff_smoothed', 'baseline', 'peak_location','rise_time','amplitude', 'decay_time', 'low_quality_peaks', 'prominence', 'width', 'frequency']))
 
     response_perc_well_df = cell_properties_df[columns].drop_duplicates().reset_index(drop=True)
 
@@ -306,31 +240,7 @@ def percentage_responding(cell_properties_df: pd.DataFrame, analysis_type = None
 
 
 
-'''
 
-def percentage_responding_spontaneous(cell_properties_df: pd.DataFrame):
-    columns = list(set(cell_properties_df.columns).difference(['label', 'centroid-0', 'centroid-1', 'ca_intensity',
-    'overlap_fraction_nuclear', 'nuclear_area', 'cell_area', 'nuclear_id', 'area',
-    'raw', 'mask_path', 'filepath', 'Unnamed: 0', 'dff', 'baseline', 'peak_location','rise_time','amplitude', 'decay_time', 'low_quality_peaks', 'prominence', 'width', 'frequency']))
-
-
-    response_perc_well_df = cell_properties_df[columns].drop_duplicates().reset_index(drop=True)
-
-    prop_active_cells_list = []
-
-    for img in response_perc_well_df['image_id']:
-        inactive = sum(cell_properties_df.loc[cell_properties_df.image_id == img].frequency == 0)
-        active = sum(cell_properties_df.loc[cell_properties_df.image_id == img].frequency > 0)
-        
-        prop_active_cells_list.append(round((active / (inactive + active)*100),2))
-
-    response_perc_well_df['proportion_active_cells'] = prop_active_cells_list
-
-    response_perc_rep_df = response_perc_well_df.groupby(['biological_replicate', 'stimulation'], observed=True)['proportion_active_cells'].mean().reset_index()
-
-    
-    return response_perc_well_df, response_perc_rep_df
-'''
 def scale_spike_properties(cell_properties_df: pd.DataFrame):
 
     features_df = cell_properties_df[['frequency','width','rise_time','decay_time','amplitude']]
