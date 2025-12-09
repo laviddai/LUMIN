@@ -763,9 +763,9 @@ def all_conditions_barplot(dataframe: pd.DataFrame, palette: dict = None, ycolum
             dodge=True, 
             hue=hue,
             ax=ax,
-            alpha=0.7,
+            alpha=0.8,
             legend=False, 
-            marker='o'
+            marker='o', size=4
         )
 
         ax.spines['right'].set_color(None)

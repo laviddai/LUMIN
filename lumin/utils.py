@@ -191,7 +191,7 @@ def compute_auc(cell_properties_df: pd.DataFrame, start_frame: int  = None, end_
 
 def percentage_responding(cell_properties_df: pd.DataFrame, analysis_type = None):
     columns = list(set(cell_properties_df.columns).difference(['label', 'centroid-0', 'centroid-1', 'ca_intensity',
-    'overlap_fraction_nuclear', 'nuclear_area', 'cell_area', 'nuclear_id', 'area','AUC_kcl','AUC','response',
+    'overlap_fraction_nuclear', 'nuclear_area', 'cell_area', 'nuclear_id', 'area','AUC_kcl','AUC','response','cluster_color','cluster',
     'raw', 'mask_path', 'filepath', 'Unnamed: 0', 'dff', 'dff_smoothed', 'baseline', 'peak_location','rise_time','amplitude', 'decay_time', 'low_quality_peaks', 'prominence', 'width', 'frequency']))
 
     response_perc_well_df = cell_properties_df[columns].drop_duplicates().reset_index(drop=True)
@@ -217,8 +217,12 @@ def percentage_responding(cell_properties_df: pd.DataFrame, analysis_type = None
 
     elif analysis_type == 'baseline':
         # Calculate proportions
-        counts['proportion_positive_cells'] = round(counts['above'] / counts.sum(axis=1) * 100, 2)
-        counts['proportion_negative_cells'] = round(counts['below'] / counts.sum(axis=1) * 100, 2)
+        prop_pos = round(counts['above'] / counts.sum(axis=1) * 100, 2)
+        prog_neg  = round(counts['below'] / counts.sum(axis=1) * 100, 2)
+
+        counts['proportion_positive_cells'] = prop_pos
+        counts['proportion_negative_cells'] = prog_neg
+        
         response_col = 'proportion_positive_cells'
 
     counts = counts.reset_index()
@@ -228,11 +232,11 @@ def percentage_responding(cell_properties_df: pd.DataFrame, analysis_type = None
     # Compute replicate-level means
     if 'marker' in cell_properties_df.columns:
         response_perc_rep_df = response_perc_well_df.groupby(
-            ['biological_replicate', 'stimulation', 'marker', 'plate_id'], observed=True
+            ['biological_replicate', 'stimulation', 'marker'], observed=True
         )[response_col].mean().reset_index()
     else:
         response_perc_rep_df = response_perc_well_df.groupby(
-            ['biological_replicate', 'stimulation', 'plate_id'], observed=True
+            ['biological_replicate', 'stimulation'], observed=True
         )[response_col].mean().reset_index()
 
     return response_perc_well_df, response_perc_rep_df

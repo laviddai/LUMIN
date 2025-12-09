@@ -239,7 +239,10 @@ def segmentation_widget():
 
                     plots_output_dir = os.path.join(project_dir, f'Segmentation/Plots/{plate_id}/{filename}_{stimulation}_{biological_replicate}')
                     mask_output_dir = os.path.join(project_dir, f'Segmentation/Masks/{plate_id}')
+                    max_projection_output_dir = os.path.join(project_dir, f'Segmentation/Masks/{plate_id}')
                     mask_name = f'{filename}_{stimulation}_{biological_replicate}_final_mask.tiff'
+                    projected_name = f'{filename}_{stimulation}_{biological_replicate}_projected.tiff'
+
 
 
 
@@ -248,6 +251,9 @@ def segmentation_widget():
                     
                     if not os.path.exists(mask_output_dir):
                         os.makedirs(mask_output_dir)
+
+                    if not os.path.exists(max_projection_output_dir):
+                        os.makedirs(max_projection_output_dir)
 
                     
                     print(f'Processing image {index+1}/{len(image_df)}: Reading from {filepath} and projecting to its max intensity...')
@@ -284,6 +290,8 @@ def segmentation_widget():
                             annotated_image_df.to_csv(f'{project_dir}/annotated_images.csv', sep=';')
 
                             io.imsave(os.path.join(mask_output_dir,  mask_name), mask)
+                            io.imsave(os.path.join(max_projection_output_dir,  projected_name), image_projected)
+
                             plot.segmentation(image = image_projected, mask = mask,  title_image = 'Calcium image', title_mask = 'Mask outline', output_path = plots_output_dir, file_name = 'calcium_mask')
                             plot.overlay_labels(image = image_projected, mask = mask, cell_properties_df = cell_properties_df, output_path = plots_output_dir, file_name = 'labelled_mask')
 
@@ -318,6 +326,8 @@ def segmentation_widget():
                         cell_properties_df = utils.extract_raw_traces(image_stack = image_stack[first_frame:], mask = filtered_mask, cell_properties_df = cell_properties_df)
 
                         io.imsave(os.path.join(mask_output_dir,  mask_name), filtered_mask)
+                        io.imsave(os.path.join(max_projection_output_dir,  projected_name), image_projected)
+
 
                         # Visualization 
                         if exposure.is_low_contrast(first_frame_image): 
@@ -358,6 +368,8 @@ def segmentation_widget():
 
                     
                         io.imsave(os.path.join(mask_output_dir,  mask_name), filtered_mask)
+                        io.imsave(os.path.join(max_projection_output_dir,  projected_name), image_projected)
+
 
                         if exposure.is_low_contrast(image_projected): 
                             image_projected = exposure.equalize_adapthist(image_projected, clip_limit=0.03)
@@ -392,7 +404,7 @@ def segmentation_widget():
                             overlap_df, filtered_mask_cyto, filtered_mask_nuclear = utils.nuclei_cell_intersection(mask_nuclear = mask_nuclear, df_nuclear = cell_properties_nuclear_df, mask_cyto = mask_cyto, df_cyto = cell_properties_cyto_df)
                         else:
                             print(f'Warning: {filepath} is empty\n')
-                            break
+                            continue
                 
 
                         cell_properties_df = utils.get_cell_properties(mask = filtered_mask_cyto, image = image_projected)
@@ -405,6 +417,8 @@ def segmentation_widget():
                         cell_properties_df = utils.extract_raw_traces(image_stack = image_stack[first_frame:], mask = filtered_mask_cyto, cell_properties_df = cell_properties_df)
 
                         io.imsave(os.path.join(mask_output_dir,  mask_name), filtered_mask_cyto)
+                        io.imsave(os.path.join(max_projection_output_dir,  projected_name), image_projected)
+
 
                         # Visualization 
                         if exposure.is_low_contrast(first_frame_image): 
@@ -473,10 +487,11 @@ def segmentation_widget():
                 cell_properties_df['plate_id'] = cell_properties_df['plate_id'].astype('category')
                 cell_properties_df['stimulation'] = cell_properties_df['stimulation'].astype('category')
                 cell_properties_df['biological_replicate'] = cell_properties_df['biological_replicate'].astype('category')
+                
                 if 'marker' in cell_properties_df.columns:
                     cell_properties_df['marker'] = cell_properties_df['marker'].astype('category')
 
-                cell_properties_df['plate_id_biological_replicate'] = cell_properties_df['plate_id'].astype(str) + '_' + cell_properties_df['biological_replicate'].astype(str)
+                # cell_properties_df['plate_id_biological_replicate'] = cell_properties_df['plate_id'].astype(str) + '_' + cell_properties_df['biological_replicate'].astype(str)
 
 
                 if 'Unnamed: 0' in cell_properties_df.columns:
@@ -1164,7 +1179,7 @@ def single_cell_widget():
         layout='vertical',
         project_dir=dict(widget_type='FileEdit',value='', label='Project directory:', mode='d', tooltip='Specify project directory for pipeline output'),
         analysis_mode = dict(widget_type='ComboBox', name = 'analysis_mode', label='Analysis mode', value='-- Select --', choices=['-- Select --','Compound-evoked activity', 'Spontaneous activity'],  tooltip='Experimental type.'),
-        activity_type = dict(widget_type='ComboBox', name = 'activity_type', label='Activity type', value='-- Select --', choices=['-- Select --','Spontaneous', 'Baseline change'],  tooltip='Type of anticipated cellular activity.'),
+        activity_type = dict(widget_type='ComboBox', name = 'activity_type', label='Activity type', value='-- Select --', choices=['-- Select --','Spontaneous', 'Baseline shift'],  tooltip='Type of anticipated cellular activity.'),
         control_condition = dict(widget_type='LineEdit',name = 'control_condition', label='Control condition', value='',  tooltip='Name of stimulation to be used as control'),
         norm_label=dict(widget_type='Label', label='<div style="text-align: center; display: block; width: 100%;"><b>———Normalization settings———</b></div>'),
         normalization_mode = dict(widget_type='ComboBox',name = 'normalization_mode', label='Normalization', value='-- Select --', choices=['-- Select --','Sliding window', 'Pre-stimulus window'],  tooltip='Normalization method (use pre-stimulus window only when recording contains a stable baseline signal).'),
@@ -1248,7 +1263,7 @@ def single_cell_widget():
                     cell_properties_df[col] = cell_properties_df[col].cat.remove_unused_categories()
 
                 # Generate parameter list to be written to file
-                parameter_list = [f'Project directory: {project_dir}', f'Analysis mode: {analysis_mode}',
+                parameter_list = [f'Project directory: {project_dir}', f'Analysis mode: {analysis_mode}',f'Activity type: {analysis_mode}',
                                 f'Control condition: {control_condition}', f'Normalization mode: {normalization_mode}']
                 
 
@@ -1341,18 +1356,18 @@ def single_cell_widget():
                     title_dict = {'amplitude': 'Amplitude','prominence':'Prominence', 'frequency':'Frequency', 'width':'Width','rise_time':'Rise time','decay_time':'Decay time', 'cluster':'Cluster'}
 
                     print('Plotting and saving output...')
-                    for exp_replicate in cell_properties_df.plate_id_biological_replicate.unique():
+                    for replicate in cell_properties_df.biological_replicate.unique():
 
-                        output_dir_exp_replicate = os.path.join(plot_dir,exp_replicate)
-                        os.makedirs(output_dir_exp_replicate)
+                        output_dir_replicate = os.path.join(plot_dir,replicate)
+                        os.makedirs(output_dir_replicate)
 
-                        subset_df = cell_properties_df[cell_properties_df.plate_id_biological_replicate == exp_replicate].copy()
+                        subset_df = cell_properties_df[cell_properties_df.biological_replicate == replicate].copy()
                         subset_df["stimulation"] = subset_df["stimulation"].cat.remove_unused_categories()
 
                         # Heatmap
                         '''if 'marker' not in cell_properties_df.columns:
                             ax_heatmap = plot.heatmap(cell_properties_df=subset_df,   imaging_interval=imaging_interval,  cmap = 'plasma', palette = palette, minmax_bool=False)
-                            plt.savefig(os.path.join(output_dir_exp_replicate, f'heatmap.pdf'),  bbox_inches='tight')
+                            plt.savefig(os.path.join(output_dir_replicate, f'heatmap.pdf'),  bbox_inches='tight')
                             plt.close()'''
 
                         # Plot properties for each plate
@@ -1364,7 +1379,7 @@ def single_cell_widget():
                                 ax_beeswarm = plot.beeswarm(cell_properties_df = subset_df[subset_df.frequency > 0].copy(), control_condition = control_condition, palette=palette, y=property, x='stimulation')
                             plt.ylabel(ylabel_dict[property])
                             plt.title(title_dict[property])
-                            plt.savefig(os.path.join(output_dir_exp_replicate, f'beeswarm_{property}.pdf'),  bbox_inches='tight')
+                            plt.savefig(os.path.join(output_dir_replicate, f'beeswarm_{property}.pdf'),  bbox_inches='tight')
                             plt.close()              
 
                     # Count number of active cells, plot barplot and save tables
@@ -1488,10 +1503,10 @@ def single_cell_widget():
 
                     
 
-                #if analysis_mode == 'Baseline change':
+                #if analysis_mode == 'Baseline shift':
                 if analysis_mode == 'Compound-evoked activity':
-                    if activity_type == 'Baseline change':
-                        print('Running baseline change analysis...')
+                    if activity_type == 'Baseline shift':
+                        print('Running baseline shift analysis...')
                         parameter_list.extend([f'Quantification - Analysis window start: {analysis_window_start}', f'Quantification - Analysis window end: {analysis_window_end}', f'Quantification - Standard deviation threshold: {baseline_std_threshold}' , f'Quantification - Imaging interval: {imaging_interval}', f'Quantification - KCl stimulation frame: {kcl_frame}'])
 
                         cell_properties_df = utils.compute_auc(cell_properties_df = cell_properties_df,  start_frame = analysis_window_start, end_frame = analysis_window_end, column='AUC')
@@ -1563,9 +1578,9 @@ def single_cell_widget():
                         # Valid diffs
                         for treatment_condition in cell_properties_df.stimulation.cat.categories.tolist():
                             if treatment_condition != control_condition:
-                                valid_comparisons = cell_properties_df[cell_properties_df.stimulation.isin([treatment_condition, control_condition])].groupby(['plate_id_biological_replicate']).stimulation.nunique()
+                                valid_comparisons = cell_properties_df[cell_properties_df.stimulation.isin([treatment_condition, control_condition])].groupby(['biological_replicate']).stimulation.nunique()
                                 valid_comparisons = valid_comparisons[valid_comparisons == 2].index  
-                                comparison_df = cell_properties_df[(cell_properties_df['plate_id_biological_replicate'].isin(valid_comparisons)) & (cell_properties_df.stimulation.isin([treatment_condition, control_condition]))]
+                                comparison_df = cell_properties_df[(cell_properties_df['biological_replicate'].isin(valid_comparisons)) & (cell_properties_df.stimulation.isin([treatment_condition, control_condition]))]
                                 comparison_df["stimulation"] = comparison_df["stimulation"].cat.remove_unused_categories()
                                 # Generate output folder
                                 if 'marker' in comparison_df.columns:
@@ -1581,23 +1596,23 @@ def single_cell_widget():
 
                                 if 'marker' not in comparison_df.columns:
 
-                                    for exp_replicate in comparison_df.plate_id_biological_replicate.unique():
-                                        subset_df = comparison_df[comparison_df.plate_id_biological_replicate == exp_replicate].copy()
+                                    for exp_replicate in comparison_df.biological_replicate.unique():
+                                        subset_df = comparison_df[comparison_df.biological_replicate == exp_replicate].copy()
                                         subset_df["stimulation"] = subset_df["stimulation"].cat.remove_unused_categories()
 
                                         # Beeswarm
                                         with plt.rc_context({"figure.dpi": 350, "figure.figsize": (1.8, 2.2)}):
 
-                                            ax_beeswarm = plot.beeswarm(cell_properties_df=subset_df, control_condition=control_condition,  std_threshold=2,  palette = palette, brace=True, x='stimulation', y='AUC', control_condition_mean=True)
+                                            ax_beeswarm = plot.beeswarm(cell_properties_df=subset_df, control_condition=control_condition,  std_threshold=baseline_std_threshold,  palette = palette, brace=True, x='stimulation', y='AUC', control_condition_mean=True)
                                             plt.ylabel(r"Ca$^{2+}$ response (AUC)")
                                             plt.savefig(os.path.join(comparison_plot_dir, f'beeswarm_{exp_replicate}.pdf'),  bbox_inches='tight')
                                             plt.close()              
 
                                         # Heatmap
-                                        '''ax_heatmap = plot.heatmap(cell_properties_df=subset_df,   imaging_interval=imaging_interval,  cmap = 'plasma', palette = palette)
+                                        ax_heatmap = plot.heatmap(cell_properties_df=subset_df,   imaging_interval=imaging_interval,  cmap = 'plasma', palette = palette)
                                         plt.savefig(os.path.join(comparison_plot_dir, f'heatmap_{exp_replicate}.pdf'),  bbox_inches='tight')
                                         plt.close()              
-                                        plt.close()'''           
+                                        plt.close()       
 
                                         # Trace
                                         ax_trace = plot.overlaid_traces_two_groups(cell_properties_df = subset_df,  control_condition = control_condition, treatment_condition= treatment_condition, trace='dff', mean=True, start_frame= analysis_window_start, end_frame = analysis_window_end, stimulation_frame = stimulation_frame,  palette=palette, imaging_interval=imaging_interval)
@@ -1768,7 +1783,7 @@ def single_cell_widget():
         widget.percentile_threshold.visible = False
         widget.stimulation_frame.visible = False
 
-        if widget.activity_type.value == 'Baseline change':
+        if widget.activity_type.value == 'Baseline shift':
             disable_enable_value(widget.normalization_mode, 'disable', 'Sliding window')
             disable_enable_value(widget.normalization_mode, 'enable', 'Pre-stimulus window')
             widget.baseline_std_threshold.visible = True
@@ -1880,13 +1895,13 @@ def single_cell_widget():
                 temp_df = cell_properties_df[cell_properties_df['image_id'] == sample].copy()
                 widget_state.previous_image_id = sample
 
-            elif analysis_mode == 'Compound-evoked activity' and activity_type == 'Baseline change':
+            elif analysis_mode == 'Compound-evoked activity' and activity_type == 'Baseline shift':
 
                 temp_df = cell_properties_df.copy()
-                temp_df['plate_id_biological_replicate'] = temp_df['plate_id'].astype(str) + '_' + temp_df['biological_replicate'].astype(str)
+                #temp_df['plate_id_biological_replicate'] = temp_df['plate_id'].astype(str) + '_' + temp_df['biological_replicate'].astype(str)
 
                 if sample_to_use == 'random':
-                    samples = temp_df['plate_id_biological_replicate'].unique().tolist()
+                    samples = temp_df['biological_replicate'].unique().tolist()
                     sample = random.choice(samples)
 
                 elif sample_to_use == 'previous':
@@ -1894,7 +1909,7 @@ def single_cell_widget():
                 
                 widget.optimize_button_previous.enabled = True
                 widget_state.previous_image_id = sample
-                temp_df = temp_df[temp_df['plate_id_biological_replicate'] == sample].copy()
+                temp_df = temp_df[temp_df['biological_replicate'] == sample].copy()
                 treatment_condition = random.choice([c for c in set(temp_df.stimulation.tolist()) if c != control_condition])
                 temp_df = temp_df[temp_df['stimulation'].isin([treatment_condition, control_condition])].copy()
 
@@ -1924,7 +1939,7 @@ def single_cell_widget():
             remove_widget_if_exists(viewer, 'Trace quantification') 
 
 
-            if analysis_mode == 'Compound-evoked activity' and activity_type == 'Baseline change':
+            if analysis_mode == 'Compound-evoked activity' and activity_type == 'Baseline shift':
                 temp_df = utils.compute_auc(cell_properties_df = temp_df,  start_frame = analysis_window_start, end_frame = analysis_window_end, column='AUC')
                 temp_df = activity.baseline_change(cell_properties_df=temp_df, control_condition = control_condition, std_threshold = baseline_std_threshold)
 

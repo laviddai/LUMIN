@@ -74,15 +74,15 @@ def baseline_change(cell_properties_df: pd.DataFrame = None,  control_condition:
 
     std_dict, mean_dict, response_l = {},{}, []
 
-    for exp_replicate in cell_properties_df.plate_id_biological_replicate.unique():
-        mean_dict[exp_replicate] = cell_properties_df[(cell_properties_df.plate_id_biological_replicate == exp_replicate) & (cell_properties_df.stimulation == control_condition)].AUC.mean()
-        std_dict[exp_replicate] = cell_properties_df[(cell_properties_df.plate_id_biological_replicate == exp_replicate) & (cell_properties_df.stimulation == control_condition)].AUC.std()
+    for replicate in cell_properties_df.biological_replicate.unique():
+        mean_dict[replicate] = cell_properties_df[(cell_properties_df.biological_replicate == replicate) & (cell_properties_df.stimulation == control_condition)].AUC.mean()
+        std_dict[replicate] = cell_properties_df[(cell_properties_df.biological_replicate == replicate) & (cell_properties_df.stimulation == control_condition)].AUC.std()
 
     for index, row in cell_properties_df.iterrows():
-        if mean_dict[row.plate_id_biological_replicate] + std_threshold * std_dict[row.plate_id_biological_replicate] < row.AUC:
+        if mean_dict[row.biological_replicate] + std_threshold * std_dict[row.biological_replicate] < row.AUC:
             response_l.append('above')
 
-        elif mean_dict[row.plate_id_biological_replicate] - std_threshold * std_dict[row.plate_id_biological_replicate] > row.AUC:
+        elif mean_dict[row.biological_replicate] - std_threshold * std_dict[row.biological_replicate] > row.AUC:
             response_l.append('below')
 
         else: response_l.append('no response')
