@@ -1,5 +1,7 @@
 # LUMIN (Live-cell User Module for Imaging and analysis of Neuronal activity)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17871921.svg)](https://doi.org/10.5281/zenodo.17871921)
+
 Lumin is a software that integrates GUI-based pipeline configuration with automated calcium imaging data analysis, containing steps for deep-learning ROI segmentation, signal extraction, ΔF/F normalization, and response quantification.
 
 This repository contains a guide on how to get started with LUMIN, as well as notebooks used to recreate figures for the manuscript with correct dimensions.
@@ -239,6 +241,7 @@ Number of clusters: 3
 8. Press `Test settings on random image` -button to sample a random image from input. The user can explore the normalization and activity classification settings using line and swarm plots. The user can adjust the settings and continue sampling random recordings until content with the analysis setup (this process will not save any output).
 
 9. Press `Run` -button to execute the Single-cell data analysis pipeline. This will process all files indicated in the `Input file` and create a `Quantification` output folder specified by `Project directory`. The output can be viewed using computers file system.
+
 
 
 
