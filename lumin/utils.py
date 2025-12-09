@@ -23,32 +23,33 @@ def read_and_project_image(filepath: str = None, first_frame: int = 0):
     img_stack = io.imread(filepath)
     image_projected = np.max(img_stack[first_frame:], axis = (0)) 
 
-    return image_projected, img_stack # return projected image and stack
+    return image_projected, img_stack # return projected image and stacks
 
 
 
 def parse_input_output(input_file: str = None, project_dir: str = None, selection_mode: str = None, co_stain: bool = False):
     try:
+
         image_df = pd.read_csv(input_file,  index_col=None, sep=None)
         image_df['image_id'] = image_df['filename'].astype(str) + '_' + image_df['plate_id'].astype(str) 
 
 
         # Parse output
-        if not os.path.isdir(project_dir) or (selection_mode == 'Automated' or selection_mode is None):
-            if os.path.exists(project_dir): shutil.rmtree(project_dir, ignore_errors=True)
-            os.makedirs(project_dir)
+        if (not os.path.isdir(project_dir) or not os.path.exists(f'{project_dir}/annotated_images.csv')) or (selection_mode == 'Automated' or selection_mode is None):
+            if os.path.exists(os.path.join(project_dir, 'Segmentation')): shutil.rmtree(os.path.join(project_dir, 'Segmentation'), ignore_errors=True)
+            if os.path.exists(os.path.join(project_dir, 'Quantification')): shutil.rmtree(os.path.join(project_dir, 'Quantification'), ignore_errors=True)
+            if os.path.exists(os.path.join(project_dir, 'annotated_images.csv')): shutil.rmtree(os.path.join(project_dir, 'annotated_images.csv'), ignore_errors=True)
 
-        # Check if output csv file in output folder. If yes, read the images already annotated
-        if os.path.exists(f'{project_dir}/annotated_images.csv'):
-            annotated_image_df = pd.read_csv(f'{project_dir}/annotated_images.csv', index_col=0, sep=None) 
-            
-        else: # Otherwise create output DF
-            if os.path.exists(project_dir): 
-                shutil.rmtree(project_dir, ignore_errors=True)
+            os.makedirs(project_dir, exist_ok=True)
+
             if co_stain == True:
                 annotated_image_df = pd.DataFrame(columns=['image_id','filename','biological_replicate', 'stimulation','plate_id', 'marker_name','max_label','image_stack','mask'])
             else: 
                 annotated_image_df = pd.DataFrame(columns=['image_id','filename','biological_replicate', 'stimulation','plate_id', 'max_label','image_stack','mask'])
+
+        # Check if output csv file in output folder. If yes, read the images already annotated
+        else:
+            annotated_image_df = pd.read_csv(f'{project_dir}/annotated_images.csv', index_col=0, sep=None) 
 
     except Exception as e: 
         print("\nAn error occurred:", e)
@@ -186,78 +187,12 @@ def compute_auc(cell_properties_df: pd.DataFrame, start_frame: int  = None, end_
     cell_properties_df[column] = auc_list
     return cell_properties_df
 
-# Check for the column names, very risky function
-'''def percentage_responding_baseline(cell_properties_df: pd.DataFrame):
-
-    columns = list(set(cell_properties_df.columns).difference(['label', 'centroid-0', 'centroid-1', 'ca_intensity',
-    'overlap_fraction_nuclear', 'nuclear_area', 'cell_area', 'nuclear_id','area',
-    'raw', 'mask_path', 'filepath', 'Unnamed: 0', 'dff', 'baseline', 'AUC','AUC_kcl', 'response']))
-
-    response_perc_well_df = cell_properties_df[columns].drop_duplicates().reset_index(drop=True)
-
-    if 'marker' in cell_properties_df.columns:
-        grouped = cell_properties_df.groupby(['stimulation', 'image_id', 'marker'])
-    else:
-        grouped = cell_properties_df.groupby(['stimulation', 'image_id'])
-
-    # Count how many are "above" and "below" per group
-    counts = grouped['response'].value_counts().unstack(fill_value=0)
-
-    # Make sure "above" and "below" columns exist
-    for col in ['above', 'below']:
-        if col not in counts.columns:
-            counts[col] = 0
-
-    # Calculate proportions
-    counts['proportion_positive_cells'] = round(counts['above'] / counts.sum(axis=1) * 100, 2)
-    counts['proportion_negative_cells'] = round(counts['below'] / counts.sum(axis=1) * 100, 2)
-
-    if 'marker' in cell_properties_df:
-        # Merge back to your response_perc_well_df
-        response_perc_well_df = response_perc_well_df.merge(
-            counts[['proportion_positive_cells', 'proportion_negative_cells']],
-            on=['stimulation', 'image_id', 'marker'],
-            how='left'
-        )
-    else:
-        response_perc_well_df = response_perc_well_df.merge(
-            counts[['proportion_positive_cells', 'proportion_negative_cells']],
-            on=['stimulation', 'image_id'],
-            how='left'
-        )
-
-
-    response_perc_well_df = response_perc_well_df.sort_values(['stimulation','proportion_positive_cells'], ascending = False)
-    if 'marker' in cell_properties_df:
-        response_perc_rep_df = response_perc_well_df.groupby(['biological_replicate', 'stimulation', 'marker'], observed=True)['proportion_positive_cells'].mean().reset_index()
-    else: 
-        response_perc_rep_df = response_perc_well_df.groupby(['biological_replicate', 'stimulation'], observed=True)['proportion_positive_cells'].mean().reset_index()
-
-
-    return response_perc_well_df, response_perc_rep_df'''
-
-
-''''response_perc_well_df = cell_properties_df[columns].drop_duplicates().reset_index(drop=True)
-
-    if 'marker' in cell_properties_df.columns:
-        grouped = cell_properties_df.groupby(['stimulation', 'image_id', 'marker'])
-    else:
-        grouped = cell_properties_df.groupby(['stimulation', 'image_id'])
-
-    # Count how many are "above" and "below" per group
-    counts = grouped['response'].value_counts().unstack(fill_value=0)
-
-    # Make sure "above" and "below" columns exist
-    for col in ['above', 'below']:
-        if col not in counts.columns:
-            counts[col] = 0
-'''
 
 
 def percentage_responding(cell_properties_df: pd.DataFrame, analysis_type = None):
     columns = list(set(cell_properties_df.columns).difference(['label', 'centroid-0', 'centroid-1', 'ca_intensity',
-    'overlap_fraction_nuclear', 'nuclear_area', 'cell_area', 'nuclear_id', 'area','AUC_kcl','AUC','response',
-    'raw', 'mask_path', 'filepath', 'Unnamed: 0', 'dff', 'baseline', 'peak_location','rise_time','amplitude', 'decay_time', 'low_quality_peaks', 'prominence', 'width', 'frequency']))
+    'overlap_fraction_nuclear', 'nuclear_area', 'cell_area', 'nuclear_id', 'area','AUC_kcl','AUC','response','cluster_color','cluster',
+    'raw', 'mask_path', 'filepath', 'Unnamed: 0', 'dff', 'dff_smoothed', 'baseline', 'peak_location','rise_time','amplitude', 'decay_time', 'low_quality_peaks', 'prominence', 'width', 'frequency']))
 
     response_perc_well_df = cell_properties_df[columns].drop_duplicates().reset_index(drop=True)
 
@@ -282,8 +217,12 @@ def percentage_responding(cell_properties_df: pd.DataFrame, analysis_type = None
 
     elif analysis_type == 'baseline':
         # Calculate proportions
-        counts['proportion_positive_cells'] = round(counts['above'] / counts.sum(axis=1) * 100, 2)
-        counts['proportion_negative_cells'] = round(counts['below'] / counts.sum(axis=1) * 100, 2)
+        prop_pos = round(counts['above'] / counts.sum(axis=1) * 100, 2)
+        prog_neg  = round(counts['below'] / counts.sum(axis=1) * 100, 2)
+
+        counts['proportion_positive_cells'] = prop_pos
+        counts['proportion_negative_cells'] = prog_neg
+        
         response_col = 'proportion_positive_cells'
 
     counts = counts.reset_index()
@@ -305,31 +244,7 @@ def percentage_responding(cell_properties_df: pd.DataFrame, analysis_type = None
 
 
 
-'''
 
-def percentage_responding_spontaneous(cell_properties_df: pd.DataFrame):
-    columns = list(set(cell_properties_df.columns).difference(['label', 'centroid-0', 'centroid-1', 'ca_intensity',
-    'overlap_fraction_nuclear', 'nuclear_area', 'cell_area', 'nuclear_id', 'area',
-    'raw', 'mask_path', 'filepath', 'Unnamed: 0', 'dff', 'baseline', 'peak_location','rise_time','amplitude', 'decay_time', 'low_quality_peaks', 'prominence', 'width', 'frequency']))
-
-
-    response_perc_well_df = cell_properties_df[columns].drop_duplicates().reset_index(drop=True)
-
-    prop_active_cells_list = []
-
-    for img in response_perc_well_df['image_id']:
-        inactive = sum(cell_properties_df.loc[cell_properties_df.image_id == img].frequency == 0)
-        active = sum(cell_properties_df.loc[cell_properties_df.image_id == img].frequency > 0)
-        
-        prop_active_cells_list.append(round((active / (inactive + active)*100),2))
-
-    response_perc_well_df['proportion_active_cells'] = prop_active_cells_list
-
-    response_perc_rep_df = response_perc_well_df.groupby(['biological_replicate', 'stimulation'], observed=True)['proportion_active_cells'].mean().reset_index()
-
-    
-    return response_perc_well_df, response_perc_rep_df
-'''
 def scale_spike_properties(cell_properties_df: pd.DataFrame):
 
     features_df = cell_properties_df[['frequency','width','rise_time','decay_time','amplitude']]
