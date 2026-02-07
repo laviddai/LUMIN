@@ -102,7 +102,7 @@ python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU')
 ## Data loading
 A small dataset is provided to test the pipeline. It's a subset of data used in the manuscript.
 
-Testing data can be loaded from this dropbox [link](https://www.dropbox.com/scl/fo/z1gg916e09zk5gmb6yrqn/ALrZjemEdyoNE28Tss1efxs?rlkey=1ljkizlzhdwxpeoqggp40zqpm&dl=0).
+Testing data can be loaded from Zenodo using this [link](https://zenodo.org/records/18517754).
 
 Download it to `{local_path}/LUMIN` folder and unzip
 
@@ -241,6 +241,7 @@ Number of clusters: 3
 8. Press `Test settings on random image` -button to sample a random image from input. The user can explore the normalization and activity classification settings using line and swarm plots. The user can adjust the settings and continue sampling random recordings until content with the analysis setup (this process will not save any output).
 
 9. Press `Run` -button to execute the Single-cell data analysis pipeline. This will process all files indicated in the `Input file` and create a `Quantification` output folder specified by `Project directory`. The output can be viewed using computers file system.
+
 
 
 
