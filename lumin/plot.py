@@ -194,8 +194,7 @@ def overlaid_traces_two_groups(cell_properties_df: pd.DataFrame = None, trace: s
 
 
 def cellwise_traces(cell_properties_df: pd.DataFrame, trace: str = None, baseline: bool = False, spikes: bool = False,
-                    spikes_mode: Literal["all", "filtered"] = "all", output_path: str = None):
-
+                    spikes_mode: Literal["all", "filtered"] = "all", output_path: str = None, smoothing: bool = False):
 
     filename = cell_properties_df['filename'].iloc[0]
     plot_list = []
@@ -218,6 +217,10 @@ def cellwise_traces(cell_properties_df: pd.DataFrame, trace: str = None, baselin
         for i, (idx, cell) in enumerate(chunk_df.iterrows()):
             ax_plot = ax[i]
             ax_plot.plot(cell[trace], color= '#1c1fb0',  linewidth=2)
+
+            if smoothing == True:
+                ax_plot.plot(cell['dff_smoothed'], color= 'magenta',  linewidth=1)
+
 
             if baseline and 'baseline' in cell:
                 ax_plot.plot(cell['baseline'], color = '#fc4a2b', alpha=0.7,  linewidth=1)
@@ -618,14 +621,16 @@ def beeswarm(cell_properties_df: pd.DataFrame,
                               markerfacecolor=palette[hc], label=str(hc),
                               markersize=6)
                    for hc in hue_categories]
-        ax.legend(handles=handles, title=hue, frameon=False)
+        ax.legend(handles=handles, title=hue,loc='center left', bbox_to_anchor=(1, 0.5), frameon=False, fontsize='small', handlelength=1.2, handletextpad=0.3)
 
     # optional std threshold line
     if std_threshold is not None:
         ref_vals = cell_properties_df.loc[cell_properties_df[x] == x_categories[0], y].values
-        ax.axhline(np.std(ref_vals)*std_threshold, color='red',
+        ax.axhline(np.mean(ref_vals) + std_threshold * np.std(ref_vals, ddof=1), color='red',
                    linewidth=1, linestyle='--', label='std threshold')
-        ax.legend(loc='upper left',bbox_to_anchor=(-0.03, 1), frameon=False, fontsize='small', handlelength=1.2, handletextpad=0.3)
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=False, fontsize='small', handlelength=1.2, handletextpad=0.3)
+
+
         
         
     #if std_threshold is not None:
@@ -636,7 +641,7 @@ def beeswarm(cell_properties_df: pd.DataFrame,
         d0 = cell_properties_df.loc[cell_properties_df[x] == x_categories[0], y].values
         d1 = cell_properties_df.loc[cell_properties_df[x] == x_categories[1], y].values
         max_value = np.max([np.max(d0), np.max(d1)])
-        thr = np.std(d0) * std_threshold if std_threshold else np.mean(d0)
+        thr = np.mean(d0) + std_threshold * np.std(d0, ddof=1) if std_threshold else np.mean(d0)
         if max_value > thr:
             draw_vertical_brace(ax, (thr, max_value), 2.45, 'Responding')
 
@@ -724,7 +729,7 @@ def heatmap(cell_properties_df: pd.DataFrame,  imaging_interval: float = None, p
         return ax
 
     
-def all_conditions_barplot(dataframe: pd.DataFrame, palette: dict = None, ycolumn: str = None, xcolumn: str = None, hue:str = None, alpha: float = 1):
+def all_conditions_barplot(dataframe: pd.DataFrame, palette: dict = None, ycolumn: str = None, xcolumn: str = None, hue:str = None, alpha: float = 1, datapoint_size: float=4):
 
     if hue is None: color_cat = xcolumn
     else: color_cat = hue
@@ -758,9 +763,9 @@ def all_conditions_barplot(dataframe: pd.DataFrame, palette: dict = None, ycolum
             dodge=True, 
             hue=hue,
             ax=ax,
-            alpha=0.7,
+            alpha=0.8,
             legend=False, 
-            marker='o'
+            marker='o', size=datapoint_size
         )
 
         ax.spines['right'].set_color(None)

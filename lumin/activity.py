@@ -1,15 +1,21 @@
 import pandas as pd
 import numpy as np
 from scipy.signal import find_peaks
+from scipy.signal import savgol_filter
 
 
 
-def spike(cell_properties_df: pd.DataFrame = None, prominence: float = None, amplitude_width_ratio: float = 0, imaging_interval: float = None, start_frame: int=None, end_frame: int=None):
-    filtered_peak_list,  amplitude_list,  prominence_list, width_list, rise_time_list, decay_time_list, low_quality_peak_list = [],[],[], [], [], [],[]
+
+def spike(cell_properties_df: pd.DataFrame = None, prominence: float = None, amplitude_width_ratio: float = 0, imaging_interval: float = None, start_frame: int=None, end_frame: int=None, smoothing: bool = False):
+    smoothed_traces, filtered_peak_list,  amplitude_list,  prominence_list, width_list, rise_time_list, decay_time_list, low_quality_peak_list = [],[],[], [], [], [],[], []
     
     
     for index, cell in cell_properties_df.iterrows():
         trace = cell['dff']
+
+        if smoothing == True:
+            trace = savgol_filter(trace, 3, 1)
+            smoothed_traces.append(trace)
 
         if end_frame is not None:
             if end_frame < 0: end_frame = None
@@ -21,8 +27,8 @@ def spike(cell_properties_df: pd.DataFrame = None, prominence: float = None, amp
   
 
         window_trace = trace[start_frame:end_frame]
-        print('trace length spike calling:', len(window_trace))
-        print(start_frame, end_frame)
+        #print('trace length spike calling:', len(window_trace))
+        #print(start_frame, end_frame)
 
         peak_location, peak_properties = find_peaks(trace, prominence = prominence, width=0, height=0)
         peak_properties.update({'peak_location':peak_location})
@@ -59,6 +65,7 @@ def spike(cell_properties_df: pd.DataFrame = None, prominence: float = None, amp
 
     cell_properties_df["response"] = np.where(cell_properties_df["frequency"] > 0, "active", "inactive")
     
+    if smoothing==True: cell_properties_df['dff_smoothed'] = smoothed_traces
 
     return cell_properties_df, start_frame, end_frame
 
@@ -67,15 +74,15 @@ def baseline_change(cell_properties_df: pd.DataFrame = None,  control_condition:
 
     std_dict, mean_dict, response_l = {},{}, []
 
-    for exp_replicate in cell_properties_df.plate_id_biological_replicate.unique():
-        mean_dict[exp_replicate] = cell_properties_df[(cell_properties_df.plate_id_biological_replicate == exp_replicate) & (cell_properties_df.stimulation == control_condition)].AUC.mean()
-        std_dict[exp_replicate] = cell_properties_df[(cell_properties_df.plate_id_biological_replicate == exp_replicate) & (cell_properties_df.stimulation == control_condition)].AUC.std()
+    for replicate in cell_properties_df.biological_replicate.unique():
+        mean_dict[replicate] = cell_properties_df[(cell_properties_df.biological_replicate == replicate) & (cell_properties_df.stimulation == control_condition)].AUC.mean()
+        std_dict[replicate] = cell_properties_df[(cell_properties_df.biological_replicate == replicate) & (cell_properties_df.stimulation == control_condition)].AUC.std()
 
     for index, row in cell_properties_df.iterrows():
-        if mean_dict[row.plate_id_biological_replicate] + std_threshold * std_dict[row.plate_id_biological_replicate] < row.AUC:
+        if mean_dict[row.biological_replicate] + std_threshold * std_dict[row.biological_replicate] < row.AUC:
             response_l.append('above')
 
-        elif mean_dict[row.plate_id_biological_replicate] - std_threshold * std_dict[row.plate_id_biological_replicate] > row.AUC:
+        elif mean_dict[row.biological_replicate] - std_threshold * std_dict[row.biological_replicate] > row.AUC:
             response_l.append('below')
 
         else: response_l.append('no response')
@@ -160,13 +167,11 @@ def peak_calling(filename,  stimulation,biological_replicate, image_id, label_id
     filtering = True
     peak_properties_dict = {}
     peak_properties_all_dict = {}
-    print(dff_traces)
-    print(type(dff_traces))
+
     
     # Call all peaks in the data and plot
     for cell_idx,ca_trace in enumerate(dff_traces.T):
-        print('CELL index')
-        print(cell_idx)
+
         #print(ca_trace)
         #print(type(ca_trace))
         #print(ca_trace.shape)
@@ -205,7 +210,5 @@ def peak_calling(filename,  stimulation,biological_replicate, image_id, label_id
                     peak_properties[key] = np.delete(peak_properties[key],properties_to_remove_idx)
     
         peak_properties.update({'cell_id':label_id[cell_idx]})
-        print(peak_properties)
 
         peak_properties_dict.update({cell_idx:peak_properties}) 
-        print(peak_properties_dict)
