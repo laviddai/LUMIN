@@ -1,6 +1,6 @@
 Project directory: /Volumes/T9/Ca_data/exp_stimulated/Analysis_revision
 Analysis mode: Compound-evoked activity
-Activity type: Compound-evoked activity
+Activity type: Baseline shift
 Control condition: Control
 Normalization mode: Pre-stimulus window
 Normalization - Stimulation frame: 20
