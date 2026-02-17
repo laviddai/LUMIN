@@ -400,7 +400,7 @@ def segmentation_widget():
                         cell_properties_nuclear_df = utils.get_cell_properties(mask = mask_nuclear, image = first_frame_image)
                         cell_properties_cyto_df = utils.get_cell_properties(mask = mask_cyto, image = image_projected)
 
-                        if len(cell_properties_nuclear_df) > 0:
+                        if len(cell_properties_nuclear_df) > 0 and len(cell_properties_cyto_df) > 0:
                             overlap_df, filtered_mask_cyto, filtered_mask_nuclear = utils.nuclei_cell_intersection(mask_nuclear = mask_nuclear, df_nuclear = cell_properties_nuclear_df, mask_cyto = mask_cyto, df_cyto = cell_properties_cyto_df)
                         else:
                             print(f'Warning: {filepath} is empty\n')
@@ -903,20 +903,23 @@ def segmentation_widget():
                 viewer.add_image(image_stack, name='CA video')
                 viewer.add_image(first_frame_image, name='Nuclear')
                 viewer.add_image(image_projected, name='Cyto')
+
+
+                original_df_nuclear = utils.get_cell_properties(mask = mask_nuclear, image = first_frame_image)
+                original_df_cyto = utils.get_cell_properties(mask = mask_cyto, image = image_projected)
+
+                if len(original_df_nuclear) > 0 and len(original_df_cyto) > 0:
+
+                    overlap_df, filtered_mask_cyto, filtered_mask_nuclear = utils.nuclei_cell_intersection(mask_nuclear = mask_nuclear, df_nuclear = original_df_nuclear, mask_cyto = mask_cyto, df_cyto = original_df_cyto)
+                else:
+                    print(f'Warning: {filepath} is empty\n')
+                    return
+                
                 viewer.add_labels(mask_nuclear, name='Mask nuclear', colormap={label: [0.0, 1.0, 1.0, 1.0] for label in np.unique(mask_nuclear) if label != 0})
                 viewer.layers['Mask nuclear'].contour = 3
                 viewer.layers['Mask nuclear'].opacity = 1
 
                 viewer.add_labels(mask_cyto, name='Mask cyto')
-
-                original_df_nuclear = utils.get_cell_properties(mask = mask_nuclear, image = first_frame_image)
-                original_df_cyto = utils.get_cell_properties(mask = mask_cyto, image = image_projected)
-
-                if len(original_df_nuclear) > 0:
-                    overlap_df, filtered_mask_cyto, filtered_mask_nuclear = utils.nuclei_cell_intersection(mask_nuclear = mask_nuclear, df_nuclear = original_df_nuclear, mask_cyto = mask_cyto, df_cyto = original_df_cyto)
-                else:
-                    print(f'Warning: {filepath} is empty\n')
-                    return
                 
                 viewer.add_labels(filtered_mask_nuclear, name='Mask nuclear filtered', colormap={label: [1.0, 0.5, 0.0, 1.0] for label in np.unique(filtered_mask_nuclear) if label != 0})
                 viewer.layers['Mask nuclear filtered'].contour = 3
